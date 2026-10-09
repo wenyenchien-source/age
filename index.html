@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>生肖虛歲查詢</title>
+    <style>
+        body { font-family: sans-serif; background-color: #f7f3ef; color: #333; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 10px; box-sizing: border-box; }
+        .container { background: #ffffff; padding: 20px; border-radius: 20px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); text-align: center; width: 100%; max-width: 400px; border: 1px solid #e8e4de; }
+        h1 { font-size: 1rem; color: #888; margin-bottom: 10px; font-weight: normal; }
+        input { width: 100%; padding: 15px; font-size: 2rem; text-align: center; border: 2px solid #ccd6dc; border-radius: 12px; box-sizing: border-box; color: #2c3e50; font-weight: bold; }
+        
+        .result-area { margin: 15px 0; min-height: 100px; display: flex; flex-direction: column; justify-content: center; }
+        .zodiac { font-size: 3rem; font-weight: bold; color: #4a6777; }
+        .age-list { font-size: 1.2rem; color: #333; font-weight: bold; }
+        
+        /* 縮小按鈕與間距，確保滿版不需滑動 */
+        .zodiac-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 15px; border-top: 1px solid #eee; padding-top: 15px; }
+        .zodiac-btn { background: #fdfdfd; border: 1px solid #ccd6dc; padding: 12px 5px; border-radius: 8px; cursor: pointer; color: #555; font-size: 1.2rem; font-weight: bold; }
+        
+        .footer { margin-top: 15px; font-size: 0.8rem; color: #c0c0c0; letter-spacing: 1px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>輸入民國年查詢</h1>
+    <input type="number" id="yearInput" placeholder="例如：74" inputmode="numeric" autofocus>
+    <div class="result-area" id="resultArea"></div>
+    <h1>點選生肖回推虛歲</h1>
+    <div class="zodiac-grid" id="zodiacGrid"></div>
+    <div class="footer">重生禮儀製作</div>
+</div>
+
+<script>
+    const currentYear = new Date().getFullYear();
+    const zodiacs = ['鼠', '牛', '虎', '兔', '龍', '蛇', '馬', '羊', '猴', '雞', '狗', '豬'];
+    const currentZodiacIndex = (currentYear - 1900) % 12;
+    const resultArea = document.getElementById('resultArea');
+    const input = document.getElementById('yearInput');
+
+    input.addEventListener('input', function() {
+        const roc = parseInt(this.value);
+        if (!this.value) { resultArea.innerHTML = ""; return; }
+        if (isNaN(roc) || roc < 0) return;
+        const western = roc + 1911;
+        const virtualAge = (currentYear - western) + 1;
+        const zIndex = (western - 1900) % 12; 
+        resultArea.innerHTML = `<div class="zodiac">${zodiacs[zIndex]}</div><div class="age-list">${virtualAge} 歲（虛歲）</div>`;
+    });
+
+    const grid = document.getElementById('zodiacGrid');
+    zodiacs.forEach((z, index) => {
+        const btn = document.createElement('div');
+        btn.className = 'zodiac-btn';
+        btn.innerText = z;
+        btn.onclick = () => {
+            let diff = (currentZodiacIndex - index + 12) % 12;
+            let startAge = 1 + diff;
+            let ages = [];
+            for(let i=0; i<8; i++) { ages.push(startAge + (i * 12)); } // 縮短為顯示8組，更易讀
+            resultArea.innerHTML = `<div class="zodiac">${z}</div><div class="age-list">虛歲：${ages.join('、')}</div>`;
+        };
+        grid.appendChild(btn);
+    });
+</script>
+</body>
+</html>

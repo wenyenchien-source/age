@@ -9,23 +9,45 @@
         .container { background: #ffffff; padding: 20px; border-radius: 20px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); text-align: center; width: 100%; max-width: 400px; border: 1px solid #e8e4de; }
         h1 { font-size: 1rem; color: #888; margin-bottom: 10px; font-weight: normal; }
         input { width: 100%; padding: 15px; font-size: 2rem; text-align: center; border: 2px solid #ccd6dc; border-radius: 12px; box-sizing: border-box; color: #2c3e50; font-weight: bold; }
-        
+
+        /* 國曆／農曆切換 */
+        .cal-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin-bottom: 10px; border: 2px solid #4a6777; border-radius: 12px; overflow: hidden; }
+        .cal-toggle button { min-height: 48px; border: none; background: #fff; color: #4a6777; font-size: 1.1rem; font-weight: bold; cursor: pointer; }
+        .cal-toggle button.active { background: #4a6777; color: #fff; }
+
+        /* 國曆模式的月、日 */
+        .md-row { display: none; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+        .md-row.show { display: grid; }
+        .md-row input { font-size: 1.5rem; padding: 10px; }
+        .md-hint { font-size: 0.85rem; color: #888; margin-top: 6px; display: none; }
+        .md-hint.show { display: block; }
+
         .result-area { margin: 15px 0; min-height: 100px; display: flex; flex-direction: column; justify-content: center; }
         .zodiac { font-size: 3rem; font-weight: bold; color: #4a6777; }
         .age-list { font-size: 1.2rem; color: #333; font-weight: bold; }
-        
+        .note { font-size: 0.9rem; color: #a0522d; margin-top: 6px; }
+
         /* 縮小按鈕與間距，確保滿版不需滑動 */
         .zodiac-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 15px; border-top: 1px solid #eee; padding-top: 15px; }
         .zodiac-btn { background: #fdfdfd; border: 1px solid #ccd6dc; padding: 12px 5px; border-radius: 8px; cursor: pointer; color: #555; font-size: 1.2rem; font-weight: bold; }
-        
+
         .footer { margin-top: 15px; font-size: 0.8rem; color: #c0c0c0; letter-spacing: 1px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>輸入民國年查詢</h1>
+    <div class="cal-toggle" id="calToggle">
+        <button type="button" data-cal="lunar" class="active">農曆生日</button>
+        <button type="button" data-cal="solar">國曆生日</button>
+    </div>
+    <h1 id="inputTitle">輸入農曆出生的民國年</h1>
     <input type="number" id="yearInput" placeholder="例如：74" inputmode="numeric" autofocus>
+    <div class="md-row" id="mdRow">
+        <input type="number" id="monthInput" placeholder="月" inputmode="numeric" min="1" max="12">
+        <input type="number" id="dayInput" placeholder="日" inputmode="numeric" min="1" max="31">
+    </div>
+    <div class="md-hint" id="mdHint">國曆 1、2 月出生的，請填月日（可能還沒過農曆年）</div>
     <div class="result-area" id="resultArea"></div>
     <h1>點選生肖回推虛歲</h1>
     <div class="zodiac-grid" id="zodiacGrid"></div>
@@ -33,20 +55,132 @@
 </div>
 
 <script>
-    const currentYear = new Date().getFullYear();
-    const zodiacs = ['鼠', '牛', '虎', '兔', '龍', '蛇', '馬', '羊', '猴', '雞', '狗', '豬'];
-    const currentZodiacIndex = (currentYear - 1900) % 12;
-    const resultArea = document.getElementById('resultArea');
-    const input = document.getElementById('yearInput');
+/* 農曆過年（正月初一）換年
+ *
+ * 用途：沖煞歲數、生肖虛歲，一律以「農曆正月初一」換年（負責人依信發堂通書確認：
+ *       民國115年2月10日 日沖肖雞 57 歲，不是 58 歲）。
+ * 注意：歲次（年柱）、月柱、年煞方位不使用本檔，仍以立春為準。
+ *
+ * 下表為 1900～2100 年每年正月初一的國曆月日（MMDD），由 lunar-javascript 1.7.7 產生。
+ * 不需要網路、不依賴外部函式庫；超出範圍的年份回傳 null，呼叫端要顯示「—」。
+ */
+(function (g) {
+  var START = 1900;
+  var TABLE = (
+    "0131 0219 0208 0129 0216 0204 0125 0213 0202 0122" +
+    "0210 0130 0218 0206 0126 0214 0203 0123 0211 0201" +
+    "0220 0208 0128 0216 0205 0124 0213 0202 0123 0210" +
+    "0130 0217 0206 0126 0214 0204 0124 0211 0131 0219" +
+    "0208 0127 0215 0205 0125 0213 0202 0122 0210 0129" +
+    "0217 0206 0127 0214 0203 0124 0212 0131 0218 0208" +
+    "0128 0215 0205 0125 0213 0202 0121 0209 0130 0217" +
+    "0206 0127 0215 0203 0123 0211 0131 0218 0207 0128" +
+    "0216 0205 0125 0213 0202 0220 0209 0129 0217 0206" +
+    "0127 0215 0204 0123 0210 0131 0219 0207 0128 0216" +
+    "0205 0124 0212 0201 0122 0209 0129 0218 0207 0126" +
+    "0214 0203 0123 0210 0131 0219 0208 0128 0216 0205" +
+    "0125 0212 0201 0122 0210 0129 0217 0206 0126 0213" +
+    "0203 0123 0211 0131 0219 0208 0128 0215 0204 0124" +
+    "0212 0201 0122 0210 0130 0217 0206 0126 0214 0202" +
+    "0123 0211 0201 0219 0208 0128 0215 0204 0124 0212" +
+    "0202 0121 0209 0129 0217 0205 0126 0214 0203 0123" +
+    "0211 0131 0219 0207 0127 0215 0205 0124 0212 0202" +
+    "0122 0209 0129 0217 0206 0126 0214 0203 0124 0210" +
+    "0130 0218 0207 0127 0215 0205 0125 0212 0201 0121" +
+    "0209"
+  ).match(/\d{4}/g);
 
-    input.addEventListener('input', function() {
-        const roc = parseInt(this.value);
-        if (!this.value) { resultArea.innerHTML = ""; return; }
-        if (isNaN(roc) || roc < 0) return;
+  /* 某西元年正月初一的國曆日期 { m, d }，超出範圍回傳 null */
+  function cnyDate(y) {
+    var s = TABLE[y - START];
+    if (!s) return null;
+    return { m: parseInt(s.slice(0, 2), 10), d: parseInt(s.slice(2), 10) };
+  }
+
+  /* 國曆 y/m/d 屬於哪一個農曆年（以西元年表示）。正月初一當天起算新年。 */
+  function lunarYearOf(y, m, d) {
+    var c = cnyDate(y);
+    if (!c) return null;
+    return (m < c.m || (m === c.m && d < c.d)) ? y - 1 : y;
+  }
+
+  g.liyiCnyDate = cnyDate;
+  g.liyiLunarYear = lunarYearOf;
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+    // 生肖、虛歲一律以「農曆正月初一」換年：出生即 1 歲，每過一次農曆年加 1 歲
+    const zodiacs = ['鼠', '牛', '虎', '兔', '龍', '蛇', '馬', '羊', '猴', '雞', '狗', '豬'];
+    const today = new Date();
+    const currentLunarYear = liyiLunarYear(today.getFullYear(), today.getMonth() + 1, today.getDate());
+    const currentZodiacIndex = (((currentLunarYear - 1900) % 12) + 12) % 12;
+
+    const resultArea = document.getElementById('resultArea');
+    const yearInput = document.getElementById('yearInput');
+    const monthInput = document.getElementById('monthInput');
+    const dayInput = document.getElementById('dayInput');
+    const mdRow = document.getElementById('mdRow');
+    const mdHint = document.getElementById('mdHint');
+    const inputTitle = document.getElementById('inputTitle');
+    let calMode = 'lunar';
+
+    function zodiacOf(year) { return zodiacs[(((year - 1900) % 12) + 12) % 12]; }
+
+    function showResult(zodiac, age, note) {
+        resultArea.innerHTML = '<div class="zodiac">' + zodiac + '</div>' +
+            '<div class="age-list">' + age + ' 歲（虛歲）</div>' +
+            (note ? '<div class="note">' + note + '</div>' : '');
+    }
+
+    function calc() {
+        const roc = parseInt(yearInput.value, 10);
+        if (!yearInput.value) { resultArea.innerHTML = ''; return; }
+        if (isNaN(roc) || roc < 1) return;
         const western = roc + 1911;
-        const virtualAge = (currentYear - western) + 1;
-        const zIndex = (western - 1900) % 12; 
-        resultArea.innerHTML = `<div class="zodiac">${zodiacs[zIndex]}</div><div class="age-list">${virtualAge} 歲（虛歲）</div>`;
+
+        if (calMode === 'lunar') {
+            // 農曆生日：輸入的年份就是生肖年
+            if (western > currentLunarYear) { resultArea.innerHTML = '<div class="age-list">—</div>'; return; }
+            showResult(zodiacOf(western), currentLunarYear - western + 1, '');
+            return;
+        }
+
+        // 國曆生日：要看生日是否已過當年的農曆正月初一
+        const m = parseInt(monthInput.value, 10), d = parseInt(dayInput.value, 10);
+        const hasMD = !isNaN(m) && !isNaN(d);
+        if (hasMD) {
+            const dt = new Date(western, m - 1, d);
+            if (m < 1 || m > 12 || dt.getMonth() !== m - 1) { resultArea.innerHTML = '<div class="age-list">日期不正確</div>'; return; }
+            const birthLunarYear = liyiLunarYear(western, m, d);
+            if (birthLunarYear === null || birthLunarYear > currentLunarYear) { resultArea.innerHTML = '<div class="age-list">—</div>'; return; }
+            const c = liyiCnyDate(western);
+            const note = birthLunarYear < western
+                ? '當年 ' + c.m + '/' + c.d + ' 才過農曆年，屬前一年生肖'
+                : '';
+            showResult(zodiacOf(birthLunarYear), currentLunarYear - birthLunarYear + 1, note);
+        } else {
+            // 只填年份：以當年過年後出生計算，並提醒 1、2 月出生要填月日
+            if (western > currentLunarYear) { resultArea.innerHTML = '<div class="age-list">—</div>'; return; }
+            const c = liyiCnyDate(western);
+            const note = c ? '若生日在國曆 ' + c.m + '/' + c.d + ' 以前，請填月日' : '';
+            showResult(zodiacOf(western), currentLunarYear - western + 1, note);
+        }
+    }
+
+    [yearInput, monthInput, dayInput].forEach(el => el.addEventListener('input', calc));
+
+    document.getElementById('calToggle').addEventListener('click', function (e) {
+        const btn = e.target.closest('button');
+        if (!btn) return;
+        calMode = btn.dataset.cal;
+        this.querySelectorAll('button').forEach(b => b.classList.toggle('active', b === btn));
+        const solar = (calMode === 'solar');
+        mdRow.classList.toggle('show', solar);
+        mdHint.classList.toggle('show', solar);
+        inputTitle.textContent = solar ? '輸入國曆出生的民國年、月、日' : '輸入農曆出生的民國年';
+        calc();
+        yearInput.focus();
     });
 
     const grid = document.getElementById('zodiacGrid');
@@ -58,8 +192,8 @@
             let diff = (currentZodiacIndex - index + 12) % 12;
             let startAge = 1 + diff;
             let ages = [];
-            for(let i=0; i<8; i++) { ages.push(startAge + (i * 12)); } // 縮短為顯示8組，更易讀
-            resultArea.innerHTML = `<div class="zodiac">${z}</div><div class="age-list">虛歲：${ages.join('、')}</div>`;
+            for (let i = 0; i < 8; i++) { ages.push(startAge + (i * 12)); } // 縮短為顯示8組，更易讀
+            resultArea.innerHTML = '<div class="zodiac">' + z + '</div><div class="age-list">虛歲：' + ages.join('、') + '</div>';
         };
         grid.appendChild(btn);
     });

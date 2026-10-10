@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>生肖虛歲查詢</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@400;500;600;700;900&display=swap">
     <style>
         body { font-family: sans-serif; background-color: #f7f3ef; color: #333; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 10px; box-sizing: border-box; }
         .container { background: #ffffff; padding: 20px; border-radius: 20px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); text-align: center; width: 100%; max-width: 400px; border: 1px solid #e8e4de; }
@@ -32,11 +34,48 @@
         .zodiac-btn { background: #fdfdfd; border: 1px solid #ccd6dc; padding: 12px 5px; border-radius: 8px; cursor: pointer; color: #555; font-size: 1.2rem; font-weight: bold; }
 
         .footer { margin-top: 15px; font-size: 0.8rem; color: #c0c0c0; letter-spacing: 1px; }
+/* ===== 重生禮儀 和風配色（與「系統工具」一致；獨立網站無法引用系統的 shared/theme.css，所以複製一份在這裡） =====
+ * 臙脂 --enji 主要按鈕與重點字；柿橘 --kaki 已選取、標記、輔助線；墨 --sumi 文字；和紙 --washi 底色 */
+:root {
+  --washi: #f7f4ef; --paper: #ffffff; --paper-2: #faf8f4;
+  --line: #d9d2c7; --line-2: #e9e4dc; --line-strong: #c9c0b3;
+  --sumi: #2a2623; --nezumi: #6b645e;
+  --kaki: #a5512c; --kaki-soft: #f6ece5;
+  --enji: #7e2f26; --enji-soft: #f6e9e6;
+  --ok: #4a6741; --ok-soft: #ebf0e5; --warn: #875a17; --warn-soft: #f6eddb;
+  --serif: "Noto Serif TC", "Songti TC", "PMingLiU", serif;
+  --sans: "Noto Sans TC", "PingFang TC", "Heiti TC", sans-serif;
+}
+.lt-row { display: flex; align-items: center; gap: 12px; }
+.lt-mark { flex: none; width: 42px; height: 42px; display: grid; place-items: center; border: 1px solid var(--kaki); color: var(--kaki); font-family: var(--serif); font-weight: 900; font-size: 22px; line-height: 1; }
+.lt-brand { margin: 0 0 4px; font-family: var(--serif); font-size: 12px; letter-spacing: 6px; color: var(--kaki); line-height: 1; }
+.lt-title { margin: 0; font-family: var(--serif); font-size: 21px; font-weight: 600; letter-spacing: 3px; color: var(--sumi); line-height: 1.25; }
+.lt-ico { width: 1.15em; height: 1.15em; flex: none; vertical-align: -0.2em; margin-right: 6px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: square; stroke-linejoin: miter; }
+
+/* ── 本頁和風樣式（只改外觀） ── */
+body { font-family: var(--sans); background-color: var(--washi); color: var(--sumi); }
+.container { border-radius: 4px; box-shadow: none; border: 1px solid var(--line); }
+.age-head { margin: 0 0 16px; padding-bottom: 14px; border-bottom: 1px solid var(--line-2); text-align: left; }
+h1 { color: var(--nezumi); }
+input { border: 1px solid var(--line-strong); border-radius: 3px; color: var(--sumi); }
+input:focus { outline: none; border-color: var(--kaki); }
+.cal-toggle { border: 1px solid var(--kaki); border-radius: 3px; }
+.cal-toggle button { color: var(--kaki); font-family: var(--serif); }
+.cal-toggle button.active { background: var(--kaki); color: #fff; font-weight: 900; }
+.md-hint { color: var(--nezumi); }
+.zodiac { font-family: var(--serif); font-weight: 900; color: var(--enji); }
+.age-list { font-family: var(--serif); color: var(--sumi); font-weight: 700; }
+.note { color: var(--kaki); }
+.zodiac-grid { border-top-color: var(--line-2); }
+.zodiac-btn { background: #fff; border-color: var(--line); border-radius: 3px; color: var(--sumi); font-family: var(--serif); font-weight: 900; }
+.zodiac-btn:active { background: var(--kaki); border-color: var(--kaki); color: #fff; }
+.footer { color: var(--nezumi); font-family: var(--serif); letter-spacing: 4px; }
     </style>
 </head>
 <body>
 
 <div class="container">
+    <div class="age-head lt-row"><span class="lt-mark" aria-hidden="true">歲</span><div><p class="lt-brand">重 生 禮 儀</p><div class="lt-title">生肖虛歲查詢</div></div></div>
     <div class="cal-toggle" id="calToggle">
         <button type="button" data-cal="lunar" class="active">農曆生日</button>
         <button type="button" data-cal="solar">國曆生日</button>

@@ -28,6 +28,8 @@
         .zodiac { font-size: 3rem; font-weight: bold; color: #4a6777; }
         .age-list { font-size: 1.2rem; color: #333; font-weight: bold; }
         .note { font-size: 0.9rem; color: #a0522d; margin-top: 6px; }
+        .suici { font-size: 1.3rem; font-weight: bold; margin-bottom: 4px; }
+        .age-rows { list-style: none; margin: 6px 0 0; padding: 0; font-size: 1.1rem; line-height: 1.7; }
 
         /* 縮小按鈕與間距，確保滿版不需滑動 */
         .zodiac-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 15px; border-top: 1px solid #eee; padding-top: 15px; }
@@ -66,6 +68,8 @@ input:focus { outline: none; border-color: var(--kaki); }
 .zodiac { font-family: var(--serif); font-weight: 900; color: var(--enji); }
 .age-list { font-family: var(--serif); color: var(--sumi); font-weight: 700; }
 .note { color: var(--kaki); }
+.suici { font-family: var(--serif); color: var(--sumi); letter-spacing: 2px; }
+.age-rows { font-family: var(--serif); color: var(--sumi); font-weight: 700; }
 .zodiac-grid { border-top-color: var(--line-2); }
 .zodiac-btn { background: #fff; border-color: var(--line); border-radius: 3px; color: var(--sumi); font-family: var(--serif); font-weight: 900; }
 .zodiac-btn:active { background: var(--kaki); border-color: var(--kaki); color: #fff; }
@@ -119,7 +123,7 @@ body:has(>.liyi-back){flex-wrap:wrap;align-content:flex-start}
  *
  * 用途：沖煞歲數、生肖虛歲，一律以「農曆正月初一」換年（負責人依信發堂通書確認：
  *       民國115年2月10日 日沖肖雞 57 歲，不是 58 歲）。
- * 注意：歲次（年柱）、月柱、年煞方位不使用本檔，仍以立春為準。
+ * 歲次（年柱）也以農曆正月初一換年（負責人確認：民國115年2月10日為乙巳年）。
  *
  * 下表為 1900～2100 年每年正月初一的國曆月日（MMDD），由 lunar-javascript 1.7.7 產生。
  * 不需要網路、不依賴外部函式庫；超出範圍的年份回傳 null，呼叫端要顯示「—」。
@@ -187,8 +191,17 @@ body:has(>.liyi-back){flex-wrap:wrap;align-content:flex-start}
 
     function zodiacOf(year) { return zodiacs[(((year - 1900) % 12) + 12) % 12]; }
 
-    function showResult(zodiac, age, note) {
+    // 歲次（干支年）：傳入農曆年（西元），1984 為甲子年；農曆年換算表範圍外顯示「—」
+    const GAN = '甲乙丙丁戊己庚辛壬癸', ZHI = '子丑寅卯辰巳午未申酉戌亥';
+    function suiciOf(year) {
+        if (!liyiCnyDate(year)) return '—';
+        const i = (((year - 1984) % 60) + 60) % 60;
+        return GAN[i % 10] + ZHI[i % 12] + '年';
+    }
+
+    function showResult(zodiac, age, note, year) {
         resultArea.innerHTML = '<div class="zodiac">' + zodiac + '</div>' +
+            '<div class="suici">' + suiciOf(year) + '</div>' +
             '<div class="age-list">' + age + ' 歲（虛歲）</div>' +
             (note ? '<div class="note">' + note + '</div>' : '');
     }
@@ -202,7 +215,7 @@ body:has(>.liyi-back){flex-wrap:wrap;align-content:flex-start}
         if (calMode === 'lunar') {
             // 農曆生日：輸入的年份就是生肖年
             if (western > currentLunarYear) { resultArea.innerHTML = '<div class="age-list">—</div>'; return; }
-            showResult(zodiacOf(western), currentLunarYear - western + 1, '');
+            showResult(zodiacOf(western), currentLunarYear - western + 1, '', western);
             return;
         }
 
@@ -218,13 +231,13 @@ body:has(>.liyi-back){flex-wrap:wrap;align-content:flex-start}
             const note = birthLunarYear < western
                 ? '當年 ' + c.m + '/' + c.d + ' 才過農曆年，屬前一年生肖'
                 : '';
-            showResult(zodiacOf(birthLunarYear), currentLunarYear - birthLunarYear + 1, note);
+            showResult(zodiacOf(birthLunarYear), currentLunarYear - birthLunarYear + 1, note, birthLunarYear);
         } else {
             // 只填年份：以當年過年後出生計算，並提醒 1、2 月出生要填月日
             if (western > currentLunarYear) { resultArea.innerHTML = '<div class="age-list">—</div>'; return; }
             const c = liyiCnyDate(western);
             const note = c ? '若生日在國曆 ' + c.m + '/' + c.d + ' 以前，請填月日' : '';
-            showResult(zodiacOf(western), currentLunarYear - western + 1, note);
+            showResult(zodiacOf(western), currentLunarYear - western + 1, note, western);
         }
     }
 
@@ -253,7 +266,12 @@ body:has(>.liyi-back){flex-wrap:wrap;align-content:flex-start}
             let startAge = 1 + diff;
             let ages = [];
             for (let i = 0; i < 8; i++) { ages.push(startAge + (i * 12)); } // 縮短為顯示8組，更易讀
-            resultArea.innerHTML = '<div class="zodiac">' + z + '</div><div class="age-list">虛歲：' + ages.join('、') + '</div>';
+            // 每個虛歲附上出生那年的歲次與民國年
+            const rows = ages.map(a => {
+                const y = currentLunarYear - a + 1;
+                return '<li>' + a + ' 歲（' + suiciOf(y).replace('年', '') + '・民國 ' + (y - 1911) + ' 年）</li>';
+            });
+            resultArea.innerHTML = '<div class="zodiac">' + z + '</div><ul class="age-rows">' + rows.join('') + '</ul>';
         };
         grid.appendChild(btn);
     });

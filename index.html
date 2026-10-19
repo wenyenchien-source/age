@@ -62,6 +62,13 @@
         .gz-age { font-size: 1.4rem; font-weight: 900; white-space: nowrap; }
         .gz-age .u { font-size: 0.85rem; margin-left: 2px; }
         .gz-foot { font-size: 0.85rem; margin-top: 8px; }
+        .gz-head { display: flex; justify-content: center; align-items: center; gap: 14px; flex-wrap: wrap; }
+        .gz-redo, .gz-more { min-height: 48px; padding: 0 16px; font-size: 1rem; cursor: pointer; }
+        .gz-more { width: 100%; margin-top: 8px; }
+        .gz-old { display: none; }
+        .gz-old.show { display: block; }
+        .gz-old .gz-list { margin-top: 0; }
+        .gz-old .gz-list li:first-child { border-top: none; }
 
         /* 縮小按鈕與間距，確保滿版不需滑動 */
         .zodiac-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 15px; border-top: 1px solid #eee; padding-top: 15px; }
@@ -121,6 +128,8 @@ input:focus { outline: none; border-color: var(--kaki); }
 .gz-list li:nth-child(even) { background: var(--paper-2); }
 .gz-sub, .gz-age .u, .gz-foot { color: var(--nezumi); }
 .gz-sub { font-family: var(--sans); }
+.gz-redo, .gz-more { background: #fff; border: 1px solid var(--kaki); border-radius: 3px; color: var(--kaki); font-family: var(--serif); font-weight: 700; }
+.gz-redo:active, .gz-more:active { background: var(--kaki-soft); }
 .zodiac-btn:active, .zodiac-btn.on { background: var(--kaki); border-color: var(--kaki); color: #fff; }
 .footer { color: var(--nezumi); font-family: var(--serif); letter-spacing: 4px; }
     </style>
@@ -167,7 +176,7 @@ body:has(>.liyi-back){flex-wrap:wrap;align-content:flex-start}
         <div class="gz-lab">地支</div><div class="gz-row zhi" id="zhiRow"></div>
     </div>
     <div class="result-area" id="resultArea"></div>
-    <h1>點選生肖回推虛歲</h1>
+    <h1 id="zodiacTitle">點選生肖回推虛歲</h1>
     <div class="zodiac-grid" id="zodiacGrid"></div>
     <div class="footer">重生禮儀製作</div>
 </div>
@@ -289,23 +298,45 @@ body:has(>.liyi-back){flex-wrap:wrap;align-content:flex-start}
 
     function rocOf(y) { return '民國' + (y === 1912 ? '元年' : ' ' + (y - 1911) + ' 年'); }
 
+    // 歲次模式：點好天干地支後收起按鈕，只留結果與「重選」；下方生肖按鈕在歲次模式先不顯示
+    function syncGzView() {
+        const gz = (calMode === 'gz'), done = gzGan !== null && gzZhi !== null;
+        document.getElementById('gzPick').classList.toggle('show', gz && !done);
+        inputTitle.style.display = (gz && done) ? 'none' : '';
+        document.getElementById('zodiacTitle').style.display = gz ? 'none' : '';
+        grid.style.display = gz ? 'none' : '';
+    }
+
     function renderGz() {
+        syncGzView();
         if (gzGan === null || gzZhi === null) { resultArea.innerHTML = ''; return; }
         // 六十甲子序號（甲子＝0）：序號除以 10 的餘數＝天干、除以 12 的餘數＝地支
         const idx = (((6 * gzGan - 5 * gzZhi) % 60) + 60) % 60;
         const latest = currentLunarYear - ((((currentLunarYear - 1984 - idx) % 60) + 60) % 60);
-        const rows = [];
+        const rows = [], oldRows = [];
         for (let y = latest; y > currentLunarYear - 360; y -= 60) {
             const main = y >= 1912 ? rocOf(y) : (qingOf(y) || y + ' 年');
             const sub = [y + ''];
             if (y < 1912) sub.push('民國前 ' + (1912 - y) + ' 年');
             const jp = japanOf(y);
             if (jp) sub.push(jp);
-            rows.push('<li><div><div class="gz-main">' + main + '</div><div class="gz-sub">' + sub.join('・') + '</div></div>' +
-                '<div class="gz-age">' + (currentLunarYear - y + 1) + '<span class="u">歲</span></div></li>');
+            const age = currentLunarYear - y + 1;
+            // 120 歲以內先列出，更早的（都是清朝）收在「更早年份」
+            (age <= 120 ? rows : oldRows).push('<li><div><div class="gz-main">' + main + '</div><div class="gz-sub">' + sub.join('・') + '</div></div>' +
+                '<div class="gz-age">' + age + '<span class="u">歲</span></div></li>');
         }
-        resultArea.innerHTML = '<div class="gz-title">' + GAN[gzGan] + ZHI[gzZhi] + '年<span class="z">（肖' + zodiacs[gzZhi] + '）</span></div>' +
-            '<ul class="gz-list">' + rows.join('') + '</ul><div class="gz-foot">以農曆年計；歲數為虛歲</div>';
+        resultArea.innerHTML = '<div class="gz-head"><div class="gz-title">' + GAN[gzGan] + ZHI[gzZhi] + '年<span class="z">（肖' + zodiacs[gzZhi] + '）</span></div>' +
+            '<button type="button" class="gz-redo" id="gzRedo">重選</button></div>' +
+            '<ul class="gz-list">' + rows.join('') + '</ul>' +
+            (oldRows.length ? '<div class="gz-old" id="gzOld"><ul class="gz-list">' + oldRows.join('') + '</ul></div>' +
+                '<button type="button" class="gz-more" id="gzMore">更早年份（清朝）▾</button>' : '') +
+            '<div class="gz-foot">以農曆年計；歲數為虛歲</div>';
+        document.getElementById('gzRedo').onclick = () => { gzGan = gzZhi = null; drawGzButtons(); renderGz(); };
+        const more = document.getElementById('gzMore');
+        if (more) more.onclick = () => {
+            const open = document.getElementById('gzOld').classList.toggle('show');
+            more.textContent = open ? '收起較早年份 ▴' : '更早年份（清朝）▾';
+        };
     }
 
     function drawGzButtons() {
@@ -386,8 +417,8 @@ body:has(>.liyi-back){flex-wrap:wrap;align-content:flex-start}
         mdRow.classList.toggle('show', solar);
         mdHint.classList.toggle('show', solar);
         yearInput.style.display = gz ? 'none' : '';
-        document.getElementById('gzPick').classList.toggle('show', gz);
         inputTitle.textContent = gz ? '點選天干、地支（例如牌位上的「乙丑年」）' : solar ? '輸入國曆出生的民國年、月、日' : '輸入農曆出生的民國年';
+        syncGzView();
         calc();
         if (!gz) yearInput.focus();
     });

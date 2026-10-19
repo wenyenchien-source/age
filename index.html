@@ -13,7 +13,7 @@
         input { width: 100%; padding: 15px; font-size: 2rem; text-align: center; border: 2px solid #ccd6dc; border-radius: 12px; box-sizing: border-box; color: #2c3e50; font-weight: bold; }
 
         /* 國曆／農曆切換 */
-        .cal-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin-bottom: 10px; border: 2px solid #4a6777; border-radius: 12px; overflow: hidden; }
+        .cal-toggle { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0; margin-bottom: 10px; border: 2px solid #4a6777; border-radius: 12px; overflow: hidden; }
         .cal-toggle button { min-height: 48px; border: none; background: #fff; color: #4a6777; font-size: 1.1rem; font-weight: bold; cursor: pointer; }
         .cal-toggle button.active { background: #4a6777; color: #fff; }
 
@@ -43,6 +43,25 @@
         .age-table .yr { display: inline-block; min-width: 2.1em; text-align: right; font-size: 1.2rem; font-weight: 700; }
         .age-table .u { font-size: 0.85rem; margin: 0 2px; }
         .age-table .gz { font-size: 1.3rem; font-weight: 700; letter-spacing: 3px; }
+
+        /* 歲次查詢：天干、地支點選 */
+        .gz-pick { display: none; }
+        .gz-pick.show { display: block; }
+        .gz-row { display: grid; gap: 6px; margin-top: 6px; }
+        .gz-row.gan { grid-template-columns: repeat(5, 1fr); }
+        .gz-row.zhi { grid-template-columns: repeat(6, 1fr); }
+        .gz-lab { font-size: 0.85rem; text-align: left; margin-top: 10px; letter-spacing: 3px; }
+        .gz-btn { min-height: 48px; font-size: 1.3rem; cursor: pointer; padding: 0; }
+        .gz-btn:disabled { cursor: default; }
+        /* 歲次查詢結果：每一列兩行（大字＝牌位常見寫法，小字＝其他對照），虛歲靠右 */
+        .gz-title { font-size: 2.2rem; font-weight: 900; }
+        .gz-list { list-style: none; margin: 10px 0 0; padding: 0; text-align: left; }
+        .gz-list li { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px; padding: 8px 6px; }
+        .gz-main { font-size: 1.25rem; font-weight: 700; }
+        .gz-sub { font-size: 0.9rem; margin-top: 2px; }
+        .gz-age { font-size: 1.4rem; font-weight: 900; white-space: nowrap; }
+        .gz-age .u { font-size: 0.85rem; margin-left: 2px; }
+        .gz-foot { font-size: 0.85rem; margin-top: 8px; }
 
         /* 縮小按鈕與間距，確保滿版不需滑動 */
         .zodiac-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 15px; border-top: 1px solid #eee; padding-top: 15px; }
@@ -90,6 +109,18 @@ input:focus { outline: none; border-color: var(--kaki); }
 .age-table .u { color: var(--nezumi); }
 .zodiac-grid { border-top-color: var(--line-2); }
 .zodiac-btn { background: #fff; border-color: var(--line); border-radius: 3px; color: var(--sumi); font-family: var(--serif); font-weight: 900; }
+.gz-lab { color: var(--kaki); font-family: var(--serif); }
+.gz-btn { background: #fff; border: 1px solid var(--line); border-radius: 3px; color: var(--sumi); font-family: var(--serif); font-weight: 900; }
+.gz-btn.on { background: var(--kaki); border-color: var(--kaki); color: #fff; }
+.gz-btn:disabled { background: var(--paper-2); border-color: var(--line-2); color: #c9c0b3; }
+.gz-title { font-family: var(--serif); color: var(--enji); letter-spacing: 3px; }
+.gz-title .z { font-size: 1.1rem; color: var(--sumi); font-weight: 700; letter-spacing: 1px; }
+.gz-list { font-family: var(--serif); color: var(--sumi); }
+.gz-list li { border-bottom: 1px solid var(--line-2); }
+.gz-list li:first-child { border-top: 1px solid var(--kaki); }
+.gz-list li:nth-child(even) { background: var(--paper-2); }
+.gz-sub, .gz-age .u, .gz-foot { color: var(--nezumi); }
+.gz-sub { font-family: var(--sans); }
 .zodiac-btn:active, .zodiac-btn.on { background: var(--kaki); border-color: var(--kaki); color: #fff; }
 .footer { color: var(--nezumi); font-family: var(--serif); letter-spacing: 4px; }
     </style>
@@ -122,6 +153,7 @@ body:has(>.liyi-back){flex-wrap:wrap;align-content:flex-start}
     <div class="cal-toggle" id="calToggle">
         <button type="button" data-cal="lunar" class="active">農曆生日</button>
         <button type="button" data-cal="solar">國曆生日</button>
+        <button type="button" data-cal="gz">歲次</button>
     </div>
     <h1 id="inputTitle">輸入農曆出生的民國年</h1>
     <input type="number" id="yearInput" placeholder="例如：74" inputmode="numeric" autofocus>
@@ -130,6 +162,10 @@ body:has(>.liyi-back){flex-wrap:wrap;align-content:flex-start}
         <input type="number" id="dayInput" placeholder="日" inputmode="numeric" min="1" max="31">
     </div>
     <div class="md-hint" id="mdHint">國曆 1、2 月出生的，請填月日（可能還沒過農曆年）</div>
+    <div class="gz-pick" id="gzPick">
+        <div class="gz-lab">天干</div><div class="gz-row gan" id="ganRow"></div>
+        <div class="gz-lab">地支</div><div class="gz-row zhi" id="zhiRow"></div>
+    </div>
     <div class="result-area" id="resultArea"></div>
     <h1>點選生肖回推虛歲</h1>
     <div class="zodiac-grid" id="zodiacGrid"></div>
@@ -224,9 +260,87 @@ body:has(>.liyi-back){flex-wrap:wrap;align-content:flex-start}
             (note ? '<div class="note">' + note + '</div>' : '');
     }
 
+    // ── 歲次查詢（看牌位「生於○○年」用）：點天干、地支，列出 360 年內所有同歲次的年份 ──
+    // 年號對照：起始西元年（元年）。清朝逾年改元，不會有同一年兩個年號。
+    const QING = [[1644, '順治'], [1662, '康熙'], [1723, '雍正'], [1736, '乾隆'], [1796, '嘉慶'],
+                  [1821, '道光'], [1851, '咸豐'], [1862, '同治'], [1875, '光緒'], [1909, '宣統']];
+    // 日本年號年中改元：1912 年明治45年／大正元年、1926 年大正15年／昭和元年。台灣日治只看 1895～1945 年。
+    const JP = [[1868, '明治'], [1912, '大正'], [1926, '昭和']];
+    let gzGan = null, gzZhi = null;
+
+    function eraYear(name, n) { return name + (n === 1 ? '元年' : ' ' + n + ' 年'); }
+
+    function qingOf(y) {
+        if (y < QING[0][0] || y > 1911) return null;
+        let e = QING[0];
+        QING.forEach(q => { if (y >= q[0]) e = q; });
+        return '清 ' + eraYear(e[1], y - e[0] + 1);
+    }
+
+    function japanOf(y) {
+        if (y < 1895 || y > 1945) return null;
+        const names = [];
+        JP.forEach((j, k) => {
+            const next = JP[k + 1];
+            if (y >= j[0] && (!next || y <= next[0])) names.push(eraYear(j[1], y - j[0] + 1));
+        });
+        return '日治 ' + names.join('／');
+    }
+
+    function rocOf(y) { return '民國' + (y === 1912 ? '元年' : ' ' + (y - 1911) + ' 年'); }
+
+    function renderGz() {
+        if (gzGan === null || gzZhi === null) { resultArea.innerHTML = ''; return; }
+        // 六十甲子序號（甲子＝0）：序號除以 10 的餘數＝天干、除以 12 的餘數＝地支
+        const idx = (((6 * gzGan - 5 * gzZhi) % 60) + 60) % 60;
+        const latest = currentLunarYear - ((((currentLunarYear - 1984 - idx) % 60) + 60) % 60);
+        const rows = [];
+        for (let y = latest; y > currentLunarYear - 360; y -= 60) {
+            const main = y >= 1912 ? rocOf(y) : (qingOf(y) || y + ' 年');
+            const sub = [y + ''];
+            if (y < 1912) sub.push('民國前 ' + (1912 - y) + ' 年');
+            const jp = japanOf(y);
+            if (jp) sub.push(jp);
+            rows.push('<li><div><div class="gz-main">' + main + '</div><div class="gz-sub">' + sub.join('・') + '</div></div>' +
+                '<div class="gz-age">' + (currentLunarYear - y + 1) + '<span class="u">歲</span></div></li>');
+        }
+        resultArea.innerHTML = '<div class="gz-title">' + GAN[gzGan] + ZHI[gzZhi] + '年<span class="z">（肖' + zodiacs[gzZhi] + '）</span></div>' +
+            '<ul class="gz-list">' + rows.join('') + '</ul><div class="gz-foot">以農曆年計；歲數為虛歲</div>';
+    }
+
+    function drawGzButtons() {
+        // 天干與地支要同為陽或同為陰才有這個歲次（例如沒有「乙子」），不成對的變灰
+        document.querySelectorAll('#ganRow .gz-btn').forEach((b, i) => {
+            b.classList.toggle('on', i === gzGan);
+            b.disabled = gzZhi !== null && i % 2 !== gzZhi % 2;
+        });
+        document.querySelectorAll('#zhiRow .gz-btn').forEach((b, i) => {
+            b.classList.toggle('on', i === gzZhi);
+            b.disabled = gzGan !== null && i % 2 !== gzGan % 2;
+        });
+    }
+
+    function makeGzButtons(rowId, chars, pick) {
+        const row = document.getElementById(rowId);
+        chars.split('').forEach((c, i) => {
+            const b = document.createElement('button');
+            b.type = 'button'; b.className = 'gz-btn'; b.textContent = c;
+            b.onclick = () => {
+                pick(i);
+                document.querySelectorAll('.zodiac-btn.on').forEach(x => x.classList.remove('on'));
+                drawGzButtons(); renderGz();
+            };
+            row.appendChild(b);
+        });
+    }
+    // 再點一次同一個字＝取消；換成不成對的字時，另一排的選擇清掉
+    makeGzButtons('ganRow', GAN, i => { gzGan = (gzGan === i) ? null : i; if (gzGan !== null && gzZhi !== null && gzZhi % 2 !== i % 2) gzZhi = null; });
+    makeGzButtons('zhiRow', ZHI, i => { gzZhi = (gzZhi === i) ? null : i; if (gzGan !== null && gzZhi !== null && gzGan % 2 !== i % 2) gzGan = null; });
+
     function calc() {
         // 改輸入年份時，取消生肖按鈕的反白
         document.querySelectorAll('.zodiac-btn.on').forEach(b => b.classList.remove('on'));
+        if (calMode === 'gz') { renderGz(); return; }
         const roc = parseInt(yearInput.value, 10);
         if (!yearInput.value) { resultArea.innerHTML = ''; return; }
         if (isNaN(roc) || roc < 1) return;
@@ -268,12 +382,14 @@ body:has(>.liyi-back){flex-wrap:wrap;align-content:flex-start}
         if (!btn) return;
         calMode = btn.dataset.cal;
         this.querySelectorAll('button').forEach(b => b.classList.toggle('active', b === btn));
-        const solar = (calMode === 'solar');
+        const solar = (calMode === 'solar'), gz = (calMode === 'gz');
         mdRow.classList.toggle('show', solar);
         mdHint.classList.toggle('show', solar);
-        inputTitle.textContent = solar ? '輸入國曆出生的民國年、月、日' : '輸入農曆出生的民國年';
+        yearInput.style.display = gz ? 'none' : '';
+        document.getElementById('gzPick').classList.toggle('show', gz);
+        inputTitle.textContent = gz ? '點選天干、地支（例如牌位上的「乙丑年」）' : solar ? '輸入國曆出生的民國年、月、日' : '輸入農曆出生的民國年';
         calc();
-        yearInput.focus();
+        if (!gz) yearInput.focus();
     });
 
     const grid = document.getElementById('zodiacGrid');
@@ -294,6 +410,7 @@ body:has(>.liyi-back){flex-wrap:wrap;align-content:flex-start}
                     '<td class="c-sui"><span class="gz">' + suiciOf(y).replace('年', '') + '</span></td></tr>';
             });
             grid.querySelectorAll('.zodiac-btn').forEach(b => b.classList.toggle('on', b === btn));
+            gzGan = gzZhi = null; drawGzButtons();
             resultArea.innerHTML = '<div class="zodiac-line"><span class="zodiac">' + z + '</span><span class="zodiac-cap">虛歲對照</span></div>' +
                 '<table class="age-table"><thead><tr><th class="c-age">年紀</th><th class="c-year">出生年</th><th class="c-sui">歲次</th></tr></thead>' +
                 '<tbody>' + rows.join('') + '</tbody></table>';

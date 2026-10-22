@@ -132,6 +132,21 @@ input:focus { outline: none; border-color: var(--kaki); }
 .gz-redo:active, .gz-more:active { background: var(--kaki-soft); }
 .zodiac-btn:active, .zodiac-btn.on { background: var(--kaki); border-color: var(--kaki); color: #fff; }
 .footer { color: var(--nezumi); font-family: var(--serif); letter-spacing: 4px; }
+
+/* ── 好讀調整（2026-10-22，只改外觀，不動計算） ── */
+/* 虛歲是最常要看的答案，放大 */
+.age-list { font-size: 1.9rem; margin-top: 4px; }
+/* 表頭、單位、提示小字放大 */
+.age-table th { font-size: 1rem; }
+.age-table .u { font-size: 1rem; }
+.gz-lab { font-size: 1rem; }
+.gz-foot, .md-hint { font-size: 0.95rem; }
+.gz-age .u { font-size: 1rem; }
+/* 拿掉數字框右邊的上下小箭頭 */
+input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+/* 點生肖後捲到結果時，上方留一點空間 */
+.result-area { scroll-margin-top: 12px; }
     </style>
 </head>
 <body>
@@ -445,6 +460,8 @@ body:has(>.liyi-back){flex-wrap:wrap;align-content:flex-start}
             resultArea.innerHTML = '<div class="zodiac-line"><span class="zodiac">' + z + '</span><span class="zodiac-cap">虛歲對照</span></div>' +
                 '<table class="age-table"><thead><tr><th class="c-age">年紀</th><th class="c-year">出生年</th><th class="c-sui">歲次</th></tr></thead>' +
                 '<tbody>' + rows.join('') + '</tbody></table>';
+            // 結果在生肖按鈕上方，手機上點了要自動捲上去才看得到
+            resultArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
         };
         grid.appendChild(btn);
     });
